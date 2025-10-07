@@ -10,11 +10,11 @@
 - **Response**: JWT token and user information -->
 
 ### POST /api/auth/register
-- **Description**: User registration endpoint
+- **Description**: User registration endpoint with enhanced validation
 - **Parameters**:
-  - `email` (string): User's email address
-  - `password` (string): User's password
-  - `username` (string): Desired username
+  - `email` (string): User's email address (validated)
+  - `password` (string): User's password (min 8 chars)
+  - `username` (string): Desired username (unique)
 - **Response**: Success message and user ID
 
 ## User Management

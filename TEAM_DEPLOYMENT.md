@@ -10,6 +10,7 @@ This system provides **consistent commit message generation** across your entire
 ```bash
 # Run the deployment script
 ./deploy.sh
+# Updated deployment process for better team onboarding
 ```
 
 ### 2. **Team Usage**

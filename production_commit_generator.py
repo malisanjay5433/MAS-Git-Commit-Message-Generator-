@@ -24,8 +24,24 @@ class ProductionDiffAnalyzer:
         """Analyze git diff using production-ready heuristics."""
         git_diff_lower = git_diff.lower()
         
-        # Enhanced analysis for production use
-        if any(keyword in git_diff_lower for keyword in ['log', 'auth', 'login', 'session', 'token', 'jwt']):
+        # Check for documentation changes first (most specific)
+        if any(keyword in git_diff_lower for keyword in ['<!--', '-->', 'documentation', 'docs', 'readme', '.md']):
+            return {
+                "change_type": "docs",
+                "scope": "documentation",
+                "confidence": "high",
+                "reasoning": "Documentation changes detected"
+            }
+        # Check for comment changes in code
+        elif any(keyword in git_diff_lower for keyword in ['<!--', '//', '#', '/*', '*/']):
+            return {
+                "change_type": "docs",
+                "scope": "code",
+                "confidence": "medium",
+                "reasoning": "Code commenting changes detected"
+            }
+        # Check for authentication features (only if not documentation)
+        elif any(keyword in git_diff_lower for keyword in ['log', 'auth', 'login', 'session', 'token', 'jwt']):
             return {
                 "change_type": "feat",
                 "scope": "auth",
@@ -114,7 +130,12 @@ class ProductionSummaryAgent:
         elif change_type == "test":
             return "Add or update tests"
         elif change_type == "docs":
-            return "Update documentation"
+            if scope == "documentation":
+                return "Update API documentation"
+            elif scope == "code":
+                return "Comment out code sections"
+            else:
+                return "Update documentation"
         elif change_type == "style":
             return "Improve code formatting and style"
         elif change_type == "build":

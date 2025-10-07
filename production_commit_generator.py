@@ -1,5 +1,5 @@
 """
-Production Git Commit Message Generator - Multi-Agent System
+Production Git Commit Message Generator - Multi-Agent System with LLM
 
 This is a production-ready version for team deployment that provides
 consistent commit message generation across all engineers using LLM.
@@ -18,15 +18,27 @@ os.environ["LLM_PROVIDER"] = "ollama"
 os.environ["OLLAMA_MODEL"] = "llama3"
 
 from crewai import Agent, Task, Crew, Process
-from langchain_ollama import ChatOllama
+from crewai import LLM
 
 
 class ProductionDiffAnalyzer:
-    """Production-ready Diff Analysis Agent."""
+    """Production-ready Diff Analysis Agent using LLM."""
     
     def __init__(self):
-        self.role = "Diff Analysis Expert"
-        self.goal = "Analyze git diffs to identify the primary purpose and type of change"
+        self.llm = LLM(model="ollama/llama3:latest", base_url="http://localhost:11434")
+        self.agent = Agent(
+            role="Diff Analysis Expert",
+            goal="Analyze git diffs to identify the primary purpose and type of change",
+            backstory="""You are an expert software engineer with deep experience in
+            code review and version control. You excel at reading git diffs and
+            identifying the nature of changes - whether they are new features,
+            bug fixes, refactoring, documentation updates, or other types of changes.
+            You understand conventional commit standards and can accurately classify
+            changes into appropriate categories.""",
+            verbose=True,
+            allow_delegation=False,
+            llm=self.llm
+        )
     
     def _extract_file_names(self, git_diff: str) -> list:
         """Extract file names from git diff output."""
@@ -41,121 +53,80 @@ class ProductionDiffAnalyzer:
         return files
     
     def analyze_diff(self, git_diff: str) -> Dict[str, Any]:
-        """Analyze git diff using production-ready heuristics."""
-        git_diff_lower = git_diff.lower()
-        
-        # Extract file names from git diff
+        """Analyze git diff using LLM-based analysis."""
         file_names = self._extract_file_names(git_diff)
         
-        # Check for documentation changes first (most specific)
-        # Only consider .md files or files with documentation-specific patterns
-        has_md_files = any('.md' in f for f in file_names)
-        has_doc_patterns = any(keyword in git_diff_lower for keyword in ['<!--', '-->', 'readme'])
+        # Create task for diff analysis
+        task = Task(
+            description=f"""
+            Analyze the following git diff and determine:
+            1. The primary type of change (feat, fix, docs, style, refactor, test, chore, build, ci)
+            2. The scope/domain of the change (auth, validation, code, documentation, etc.)
+            3. The confidence level (high, medium, low)
+            4. Brief reasoning for the classification
+            
+            Git Diff:
+            {git_diff}
+            
+            Return your analysis in this exact JSON format:
+            {{
+                "change_type": "feat|fix|docs|style|refactor|test|chore|build|ci",
+                "scope": "specific_scope",
+                "confidence": "high|medium|low",
+                "reasoning": "brief explanation"
+            }}
+            """,
+            agent=self.agent,
+            expected_output="JSON object with change_type, scope, confidence, and reasoning"
+        )
         
-        # Don't match if it's a .py file with code changes
-        is_python_code = any('.py' in f for f in file_names) and any(keyword in git_diff_lower for keyword in ['def ', 'class ', 'import ', 'return '])
+        # Create crew and execute
+        crew = Crew(
+            agents=[self.agent],
+            tasks=[task],
+            process=Process.sequential,
+            verbose=True
+        )
         
-        if (has_md_files or has_doc_patterns) and not is_python_code:
-            return {
-                "change_type": "docs",
-                "scope": "documentation",
-                "confidence": "high",
-                "reasoning": "Documentation changes detected",
-                "files": file_names
-            }
-        # Check for code enhancements and new functionality
-        elif any(keyword in git_diff_lower for keyword in ['def ', 'class ', 'import ', 'return ', 'if ', 'for ', 'while ']):
-            return {
-                "change_type": "feat",
-                "scope": "code",
-                "confidence": "high",
-                "reasoning": "Code enhancements and new functionality detected",
-                "files": file_names
-            }
-        # Check for comment changes in code
-        elif any(keyword in git_diff_lower for keyword in ['<!--', '//', '#', '/*', '*/']):
-            return {
-                "change_type": "docs",
-                "scope": "code",
-                "confidence": "medium",
-                "reasoning": "Code commenting changes detected",
-                "files": file_names
-            }
-        # Check for authentication features (only if not documentation)
-        elif any(keyword in git_diff_lower for keyword in ['log', 'auth', 'login', 'session', 'token', 'jwt']):
-            return {
-                "change_type": "feat",
-                "scope": "auth",
-                "confidence": "high",
-                "reasoning": "Authentication and security features detected",
-                "files": file_names
-            }
-        elif any(keyword in git_diff_lower for keyword in ['pattern', 'regex', 'validation', 'fix', 'bug', 'error']):
-            return {
-                "change_type": "fix",
-                "scope": "validation",
-                "confidence": "high",
-                "reasoning": "Bug fixes and validation improvements detected",
-                "files": file_names
-            }
-        elif any(keyword in git_diff_lower for keyword in ['_', 'private', 'encapsulation', 'refactor', 'cleanup']):
-            return {
-                "change_type": "refactor",
-                "scope": "code",
-                "confidence": "medium",
-                "reasoning": "Code structure and encapsulation improvements detected",
-                "files": file_names
-            }
-        elif any(keyword in git_diff_lower for keyword in ['test', 'spec', 'mock', 'stub']):
-            return {
-                "change_type": "test",
-                "scope": "testing",
-                "confidence": "high",
-                "reasoning": "Test code additions or modifications detected",
-                "files": file_names
-            }
-        # Remove this generic docs detection - it's too broad
-        # elif any(keyword in git_diff_lower for keyword in ['doc', 'readme', 'comment', 'explanation']):
-        elif any(keyword in git_diff_lower for keyword in ['style', 'format', 'lint', 'prettier']):
-            return {
-                "change_type": "style",
-                "scope": "formatting",
-                "confidence": "medium",
-                "reasoning": "Code formatting and style changes detected"
-            }
-        elif any(keyword in git_diff_lower for keyword in ['build', 'compile', 'package', 'dependencies']):
-            return {
-                "change_type": "build",
-                "scope": "dependencies",
-                "confidence": "high",
-                "reasoning": "Build system and dependency changes detected"
-            }
-        elif any(keyword in git_diff_lower for keyword in ['ci', 'pipeline', 'workflow', 'github', 'actions']):
-            return {
-                "change_type": "ci",
-                "scope": "pipeline",
-                "confidence": "high",
-                "reasoning": "CI/CD pipeline changes detected"
-            }
-        else:
+        result = crew.kickoff()
+        
+        # Parse the result and add file names
+        try:
+            import json
+            analysis = json.loads(str(result))
+            analysis["files"] = file_names
+            return analysis
+        except:
+            # Fallback if JSON parsing fails
             return {
                 "change_type": "chore",
-                "scope": "maintenance",
+                "scope": "maintenance", 
                 "confidence": "low",
-                "reasoning": "General maintenance changes detected",
+                "reasoning": "Unable to parse LLM analysis",
                 "files": file_names
             }
 
 
 class ProductionSummaryAgent:
-    """Production-ready Summary Agent."""
+    """Production-ready Summary Agent using LLM."""
     
     def __init__(self):
-        self.role = "Technical Writer & Code Summarizer"
-        self.goal = "Create clear, concise, and human-readable summaries of code changes"
+        self.llm = LLM(model="ollama/llama3:latest", base_url="http://localhost:11434")
+        self.agent = Agent(
+            role="Technical Writer & Code Summarizer",
+            goal="Create clear, concise, and human-readable summaries of code changes",
+            backstory="""You are an expert technical writer with deep understanding of
+            software development. You excel at creating clear, concise summaries
+            that capture the essence of code changes in a way that's useful for
+            developers, project managers, and stakeholders. You understand the
+            context and impact of different types of changes.""",
+            verbose=True,
+            allow_delegation=False,
+            llm=self.llm
+        )
     
     def create_summary(self, git_diff: str, change_type: str = None, scope: str = None, files: list = None) -> str:
-        """Create production-quality summary based on change type and scope."""
+        """Create production-quality summary using LLM."""
         # Create file context for summary
         file_context = ""
         if files:
@@ -166,50 +137,112 @@ class ProductionSummaryAgent:
             else:
                 file_context = f" in {files[0]} and {len(files)-1} other files"
         
-        if change_type == "feat":
-            if scope == "auth":
-                return f"Add authentication and security features{file_context}"
-            else:
-                return f"Add new functionality{file_context}"
-        elif change_type == "fix":
-            if scope == "validation":
-                return f"Fix validation and input handling{file_context}"
-            else:
-                return f"Fix bugs and resolve issues{file_context}"
-        elif change_type == "refactor":
-            return f"Refactor code for better structure and maintainability{file_context}"
-        elif change_type == "test":
-            return f"Add or update tests{file_context}"
-        elif change_type == "docs":
-            if scope == "documentation":
-                return f"Update API documentation{file_context}"
-            elif scope == "code":
-                return f"Comment out code sections{file_context}"
-            else:
-                return f"Update documentation{file_context}"
-        elif change_type == "style":
-            return "Improve code formatting and style"
-        elif change_type == "build":
-            return "Update build configuration and dependencies"
-        elif change_type == "ci":
-            return "Update CI/CD pipeline configuration"
-        else:
-            return "Update codebase with maintenance improvements"
+        # Create task for summary generation
+        task = Task(
+            description=f"""
+            Create a clear, concise summary for the following code changes:
+            
+            Change Type: {change_type}
+            Scope: {scope}
+            Files: {files}
+            
+            Git Diff:
+            {git_diff}
+            
+            Create a professional summary that:
+            1. Describes what was changed
+            2. Is clear and concise
+            3. Is appropriate for commit messages
+            4. Includes file context if relevant
+            
+            Return only the summary text, no additional formatting.
+            """,
+            agent=self.agent,
+            expected_output="Clear, concise summary of the changes"
+        )
+        
+        # Create crew and execute
+        crew = Crew(
+            agents=[self.agent],
+            tasks=[task],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        result = crew.kickoff()
+        return str(result).strip()
 
 
 class ProductionCommitFormatter:
-    """Production-ready Commit Formatter Agent."""
+    """Production-ready Commit Formatter Agent using LLM."""
     
     def __init__(self):
-        self.role = "Conventional Commit Specialist"
-        self.goal = "Format commit messages according to Conventional Commits specification"
+        self.llm = LLM(model="ollama/llama3:latest", base_url="http://localhost:11434")
+        self.agent = Agent(
+            role="Conventional Commit Specialist",
+            goal="Format commit messages according to Conventional Commits specification",
+            backstory="""You are an expert in conventional commit standards and best practices.
+            You understand the importance of consistent, clear commit messages for
+            team collaboration, automated tooling, and project maintenance. You
+            excel at formatting commit messages that follow conventional commit
+            standards while being clear and informative.""",
+            verbose=True,
+            allow_delegation=False,
+            llm=self.llm
+        )
     
     def format_commit_message(self, change_type: str, summary: str, scope: str = None) -> str:
-        """Format commit message according to conventional commit standards."""
-        if scope and scope != "none" and scope != "maintenance":
-            return f"{change_type}({scope}): {summary.lower()}"
-        else:
-            return f"{change_type}: {summary.lower()}"
+        """Format commit message using LLM."""
+        # Create task for commit formatting
+        task = Task(
+            description=f"""
+            You are a Conventional Commit Specialist. Create a proper commit message.
+            
+            Input Details:
+            - Change Type: {change_type}
+            - Scope: {scope}
+            - Summary: {summary}
+            
+            Requirements:
+            1. Format: type(scope): description
+            2. Use the provided change_type and scope
+            3. Create a clear, concise description based on the summary
+            4. Keep under 50 characters
+            5. Follow conventional commit standards
+            
+            Examples:
+            - feat(auth): add user authentication
+            - fix(validation): resolve email validation error
+            - docs(api): update API documentation
+            
+            Output ONLY the commit message in the format: type(scope): description
+            Do not include any other text, explanations, or formatting.
+            """,
+            agent=self.agent,
+            expected_output="Conventional commit message in format: type(scope): description"
+        )
+        
+        # Create crew and execute
+        crew = Crew(
+            agents=[self.agent],
+            tasks=[task],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        result = crew.kickoff()
+        formatted_result = str(result).strip()
+        
+        # Fallback: If LLM doesn't generate proper format, create it manually
+        if not formatted_result or len(formatted_result) > 100 or ":" not in formatted_result:
+            # Create proper conventional commit message manually
+            scope_part = f"({scope})" if scope and scope != "maintenance" else ""
+            description = summary.replace(" in ", " ").replace("production_commit_generator.py", "").strip()
+            if len(description) > 50:
+                description = description[:47] + "..."
+            formatted_result = f"{change_type}{scope_part}: {description}"
+        
+        return formatted_result
 
 
 class ProductionCommitMessageGenerator:
@@ -253,14 +286,15 @@ class ProductionCommitMessageGenerator:
     
     def generate_commit_message(self, git_diff: Optional[str] = None, 
                               use_staged: bool = False, verbose: bool = False) -> str:
-        """Generate a conventional commit message using the multi-agent system."""
-        
-        # Get git diff if not provided
-        if git_diff is None:
-            if use_staged:
-                git_diff = self.get_staged_diff()
-            else:
-                git_diff = self.get_git_diff()
+        """Generate commit message using multi-agent system."""
+        if use_staged:
+            if verbose:
+                print("📋 Using staged changes...")
+            git_diff = self.get_staged_diff()
+        elif git_diff is None:
+            if verbose:
+                print("📊 Using last commit...")
+            git_diff = self.get_git_diff()
         
         if not git_diff.strip():
             return "No changes detected or git diff is empty."
@@ -275,7 +309,7 @@ class ProductionCommitMessageGenerator:
             print("-" * 30)
         analysis = self.diff_analyzer.analyze_diff(git_diff)
         if verbose:
-            print(f"Agent: {self.diff_analyzer.role}")
+            print(f"Agent: {self.diff_analyzer.agent.role}")
             print(f"Analysis: {analysis}")
         
         # Step 2: Summary Creation
@@ -289,7 +323,7 @@ class ProductionCommitMessageGenerator:
             analysis.get("files", [])
         )
         if verbose:
-            print(f"Agent: {self.summary_agent.role}")
+            print(f"Agent: {self.summary_agent.agent.role}")
             print(f"Summary: {summary}")
         
         # Step 3: Commit Formatting
@@ -302,7 +336,7 @@ class ProductionCommitMessageGenerator:
             analysis["scope"]
         )
         if verbose:
-            print(f"Agent: {self.formatter_agent.role}")
+            print(f"Agent: {self.formatter_agent.agent.role}")
             print(f"Formatted Message: {commit_message}")
         
         return commit_message
@@ -311,43 +345,43 @@ class ProductionCommitMessageGenerator:
 def main():
     """Main entry point for production commit message generator."""
     parser = argparse.ArgumentParser(
-        description="Production Git Commit Message Generator - Multi-Agent System",
+        description="Production Git Commit Message Generator - Multi-Agent System with LLM",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python production_commit_generator.py                    # Use last commit
-  python production_commit_generator.py --staged         # Use staged changes
-  python production_commit_generator.py --verbose       # Show detailed workflow
-  python production_commit_generator.py --copy          # Copy to clipboard
-  python production_commit_generator.py HEAD~2 HEAD     # Custom commit range
+  python production_commit_generator_llm.py                    # Use last commit
+  python production_commit_generator_llm.py --staged         # Use staged changes
+  python production_commit_generator_llm.py --verbose       # Show detailed workflow
+  python production_commit_generator_llm.py --copy          # Copy to clipboard
+  python production_commit_generator_llm.py HEAD~2 HEAD     # Custom commit range
         """
     )
     
-    parser.add_argument('--staged', action='store_true', 
-                       help='Use staged changes instead of last commit')
-    parser.add_argument('--verbose', '-v', action='store_true',
-                       help='Show detailed multi-agent workflow')
-    parser.add_argument('--copy', '-c', action='store_true',
-                       help='Copy generated message to clipboard')
-    parser.add_argument('commit_range', nargs='?', default=None,
-                       help='Custom commit range (e.g., HEAD~2 HEAD)')
+    parser.add_argument("--staged", action="store_true", 
+                       help="Use staged changes instead of last commit")
+    parser.add_argument("--verbose", action="store_true", 
+                       help="Show detailed multi-agent workflow")
+    parser.add_argument("--copy", action="store_true", 
+                       help="Copy generated message to clipboard")
+    parser.add_argument("commit_range", nargs="?", 
+                       help="Custom commit range (e.g., HEAD~2 HEAD)")
     
     args = parser.parse_args()
-    
-    print("🚀 Production Git Commit Message Generator")
-    print("=" * 60)
-    print("Multi-Agent System for Team Consistency")
-    print("=" * 60)
     
     # Initialize the production generator
     generator = ProductionCommitMessageGenerator()
     
-    # Determine git diff source
+    print("🚀 Production Git Commit Message Generator")
+    print("=" * 60)
+    print("Multi-Agent System with LLM Analysis")
+    print("=" * 60)
+    
+    # Generate commit message
     if args.staged:
         print("📋 Using staged changes...")
         commit_message = generator.generate_commit_message(use_staged=True, verbose=args.verbose)
     elif args.commit_range:
-        print(f"📊 Using custom commit range: {args.commit_range}")
+        print(f"📊 Using commit range: {args.commit_range}")
         commit_message = generator.generate_commit_message(
             git_diff=generator.get_git_diff(args.commit_range), 
             verbose=args.verbose
@@ -370,9 +404,9 @@ Examples:
             pyperclip.copy(commit_message)
             print("\n📋 Commit message copied to clipboard!")
         except ImportError:
-            print("\n💡 Install pyperclip to enable clipboard functionality: pip install pyperclip")
-    
-    return commit_message
+            print("\n💡 Tip: Install pyperclip to auto-copy to clipboard")
+        except Exception as e:
+            print(f"\n⚠️  Could not copy to clipboard: {e}")
 
 
 if __name__ == "__main__":

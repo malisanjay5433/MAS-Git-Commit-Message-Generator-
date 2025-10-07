@@ -2,12 +2,12 @@
 
 ## Authentication Endpoints
 
-### POST /api/auth/login
+<!-- ### POST /api/auth/login
 - **Description**: User login endpoint
 - **Parameters**: 
   - `username` (string): User's username
   - `password` (string): User's password
-- **Response**: JWT token and user information
+- **Response**: JWT token and user information -->
 
 ### POST /api/auth/register
 - **Description**: User registration endpoint

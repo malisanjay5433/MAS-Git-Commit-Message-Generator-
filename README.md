@@ -257,4 +257,4 @@ MIT License - Free to use and modify.
 
 ---
 
-**Ready to use?** Just run `./commit.sh` and start generating better commit messages! 🎉
+**Ready to use?** Just run `./commit.sh` and start generating better commit messages! 🎉# Test comment

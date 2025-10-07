@@ -15,16 +15,16 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from commit_generator import (
-    DiffAnalyzer, CommitFormatter, GitService, 
+    DiffAnalysisAgent, SummaryAgent, CommitFormatterAgent, GitService, 
     CommitMessageGenerator, ChangeType, Scope
 )
 
 
-class TestDiffAnalyzer(unittest.TestCase):
-    """Test the DiffAnalyzer agent."""
+class TestDiffAnalysisAgent(unittest.TestCase):
+    """Test the DiffAnalysisAgent."""
     
     def setUp(self):
-        self.analyzer = DiffAnalyzer()
+        self.analyzer = DiffAnalysisAgent()
     
     def test_extract_files_single_file(self):
         """Test extracting single file from diff."""
@@ -99,30 +99,30 @@ index 1234567..abcdefg 100644
         self.assertEqual(result["confidence"], "high")
 
 
-class TestCommitFormatter(unittest.TestCase):
-    """Test the CommitFormatter agent."""
+class TestCommitFormatterAgent(unittest.TestCase):
+    """Test the CommitFormatterAgent."""
     
     def setUp(self):
-        self.formatter = CommitFormatter()
+        self.formatter = CommitFormatterAgent()
     
     def test_format_feat_auth(self):
         """Test formatting feature with auth scope."""
-        result = self.formatter.format(ChangeType.FEAT.value, Scope.AUTH.value)
+        result = self.formatter.format_commit_message(ChangeType.FEAT.value, Scope.AUTH.value, "add authentication")
         self.assertEqual(result, "feat(auth): add authentication features")
     
     def test_format_fix_validation(self):
         """Test formatting fix with validation scope."""
-        result = self.formatter.format(ChangeType.FIX.value, Scope.VALIDATION.value)
+        result = self.formatter.format_commit_message(ChangeType.FIX.value, Scope.VALIDATION.value, "fix validation")
         self.assertEqual(result, "fix(validation): fix validation issues")
     
     def test_format_docs_readme(self):
         """Test formatting docs with readme scope."""
-        result = self.formatter.format(ChangeType.DOCS.value, Scope.README.value)
+        result = self.formatter.format_commit_message(ChangeType.DOCS.value, Scope.README.value, "update README")
         self.assertEqual(result, "docs(readme): update README")
     
     def test_format_chore_maintenance(self):
         """Test formatting chore with maintenance scope."""
-        result = self.formatter.format(ChangeType.CHORE.value, Scope.MAINTENANCE.value)
+        result = self.formatter.format_commit_message(ChangeType.CHORE.value, Scope.MAINTENANCE.value, "maintain codebase")
         self.assertEqual(result, "chore: maintain codebase")
 
 

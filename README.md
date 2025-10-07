@@ -49,7 +49,7 @@ That's it! Your commit message is generated and copied to clipboard.
 ./commit.sh
 
 # Or directly
-python fast_commit_generator.py --staged --copy
+python commit_generator.py --staged --copy
 ```
 
 ### Advanced Usage
@@ -61,7 +61,7 @@ python fast_commit_generator.py
 python fast_commit_generator.py HEAD~2 HEAD
 
 # Show detailed analysis
-python production_commit_generator.py --staged --verbose
+python commit_generator.py --staged --verbose
 ```
 
 ## 🛠️ Available Commands
@@ -69,8 +69,8 @@ python production_commit_generator.py --staged --verbose
 | Command | Description | Speed |
 |---------|-------------|-------|
 | `./commit.sh` | **Recommended** - Fast with AI | ~2-3 seconds |
-| `python fast_commit_generator.py --staged --copy` | Direct usage | ~2-3 seconds |
-| `python production_commit_generator.py --staged` | Full analysis | ~10-15 seconds |
+| `python commit_generator.py --staged --copy` | Direct usage | ~2-3 seconds |
+| `python commit_generator.py --staged --verbose` | Full analysis | ~10-15 seconds |
 
 ## 📋 Commit Types Generated
 
@@ -103,7 +103,7 @@ This will:
 ### Create Team Alias
 Add to your `~/.zshrc` or `~/.bashrc`:
 ```bash
-alias commit-msg="cd /path/to/AI-Apps && source venv/bin/activate && python fast_commit_generator.py --staged --copy"
+alias commit-msg="cd /path/to/AI-Apps && source venv/bin/activate && python commit_generator.py --staged --copy"
 ```
 
 Then use: `commit-msg`
@@ -124,7 +124,7 @@ pip install -r requirements.txt
 ollama pull llama3
 
 # 2. Add global alias
-echo 'alias commit-msg="cd ~/.commit-generator && source venv/bin/activate && python fast_commit_generator.py --staged --copy"' >> ~/.zshrc
+echo 'alias commit-msg="cd ~/.commit-generator && source venv/bin/activate && python commit_generator.py --staged --copy"' >> ~/.zshrc
 source ~/.zshrc
 
 # 3. Use in ANY project
@@ -151,7 +151,7 @@ cat > ../generate-commit.sh << 'EOF'
 #!/bin/bash
 cd commit-generator
 source venv/bin/activate
-python fast_commit_generator.py --staged --copy
+python commit_generator.py --staged --copy
 EOF
 
 chmod +x ../generate-commit.sh
@@ -192,7 +192,7 @@ python -m venv venv && \
 source venv/bin/activate && \
 pip install -r requirements.txt && \
 ollama pull llama3 && \
-echo 'alias commit-msg="cd ~/.commit-generator && source venv/bin/activate && python fast_commit_generator.py --staged --copy"' >> ~/.zshrc && \
+echo 'alias commit-msg="cd ~/.commit-generator && source venv/bin/activate && python commit_generator.py --staged --copy"' >> ~/.zshrc && \
 echo "✅ Ready! Use 'commit-msg' in any git project."
 ```
 

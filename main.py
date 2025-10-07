@@ -5,7 +5,7 @@ This uses the working simple multi-agent system.
 For demonstration, use demo_commit_generator.py
 """
 
-from production_commit_generator import ProductionCommitMessageGenerator
+from commit_generator import ProductionCommitMessageGenerator
 import sys
 
 def main():
@@ -28,7 +28,7 @@ def main():
             print("  python main.py --staged  # Use staged changes")
             print("  python main.py --help    # Show this help")
             print("\nFor production usage, run:")
-            print("  python production_commit_generator.py --staged --copy")
+            print("  python commit_generator.py --staged --copy")
             return
         else:
             # Custom commit range

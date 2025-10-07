@@ -68,9 +68,18 @@ python commit_generator.py --staged --verbose
 
 | Command | Description | Speed |
 |---------|-------------|-------|
-| `./commit.sh` | **Recommended** - Fast with AI | ~2-3 seconds |
-| `python commit_generator.py --staged --copy` | Direct usage | ~2-3 seconds |
-| `python commit_generator.py --staged --verbose` | Full analysis | ~10-15 seconds |
+| `./commit.sh` | **Recommended** - Clean SOLID code | ~0.5 seconds |
+| `python commit_generator.py --staged --copy` | Direct usage (clean) | ~0.5 seconds |
+| `python commit_generator_vanilla.py --staged` | Vanilla multi-agent | ~2-3 seconds |
+| `python main.py --staged` | Simple interface | ~2-3 seconds |
+
+## 📁 **File Versions**
+
+| File | Purpose | Code Quality | Best For |
+|------|---------|--------------|----------|
+| `commit_generator.py` | **Main version** - Clean SOLID code | ⭐⭐⭐⭐⭐ | **Production use** |
+| `commit_generator_vanilla.py` | **Vanilla version** - Original multi-agent | ⭐⭐⭐ | Learning, comparison |
+| `main.py` | **Simple interface** - Easy to use | ⭐⭐⭐ | Quick testing |
 
 ## 📋 Commit Types Generated
 

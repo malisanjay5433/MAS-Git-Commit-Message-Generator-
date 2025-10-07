@@ -5,7 +5,7 @@ This uses the working simple multi-agent system.
 For demonstration, use demo_commit_generator.py
 """
 
-from commit_generator import ProductionCommitMessageGenerator
+from commit_generator_vanilla import ProductionCommitMessageGenerator
 import sys
 
 def main():

@@ -15,7 +15,7 @@ setup(
     version="1.0.0",
     author="Sanjay Mali",
     author_email="malisanjay5433@gmail.com",
-    description="AI-powered multi-agent system for generating conventional commit messages",
+    description="Multi-agent system for generating conventional commit messages",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/malisanjay5433/MAS-Git-Commit-Message-Generator-",
@@ -30,16 +30,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
-        "Topic :: Software Development :: Version Control",
-        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.8",
     install_requires=requirements,
-    entry_points={
-        "console_scripts": [
-            "commit-gen=commit_generator:main",
-        ],
-    },
-    include_package_data=True,
-    zip_safe=False,
 )

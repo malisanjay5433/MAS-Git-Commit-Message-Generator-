@@ -16,7 +16,7 @@ for intelligent analysis with robust fallback mechanisms for reliability.
 
 Author: Sanjay Mali
 Version: 1.0.0
-License: MIT
+License: Unlicense
 """
 
 import os

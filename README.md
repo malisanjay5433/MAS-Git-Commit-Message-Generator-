@@ -319,7 +319,7 @@ feat(auth): add user authentication
 
 ## 📄 License
 
-MIT License - Free to use and modify.
+Unlicense - This project is released into the public domain. You are free to use, modify, and distribute this software without any restrictions.
 
 ---
 

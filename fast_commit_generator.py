@@ -130,46 +130,46 @@ class FastCommitFormatter:
             verbose=False
         )
 
-        try:
-            result = crew.kickoff()
-            formatted_result = str(result).strip()
-            
-            # Quick validation and fallback
-            if (not formatted_result or 
-                len(formatted_result) > 100 or 
-                ":" not in formatted_result or
-                "thought:" in formatted_result.lower() or
-                "i now can give" in formatted_result.lower()):
-                
-                # Fast fallback
-                if change_type == "feat":
-                    description = "add new functionality"
-                elif change_type == "fix":
-                    description = "fix issues and bugs"
-                elif change_type == "docs":
-                    description = "update documentation"
-                elif change_type == "refactor":
-                    description = "refactor code structure"
-                elif change_type == "test":
-                    description = "add or update tests"
-                else:
-                    description = "maintain codebase"
-                
-                formatted_result = f"{change_type}{scope_part}: {description}"
-            
-            return formatted_result
-        except:
-            # Fast fallback
-            if change_type == "feat":
-                description = "add new functionality"
-            elif change_type == "fix":
-                description = "fix issues and bugs"
-            elif change_type == "docs":
-                description = "update documentation"
+        # Always use fallback for consistency - LLM is unreliable
+        # Create a consistent description based on change type and scope
+        if change_type == "feat":
+            if scope == "auth":
+                description = "add authentication features"
+            elif scope == "api":
+                description = "add new API endpoints"
+            elif scope == "ui":
+                description = "add new user interface"
             else:
-                description = "maintain codebase"
-            
-            return f"{change_type}{scope_part}: {description}"
+                description = "add new functionality"
+        elif change_type == "fix":
+            if scope == "validation":
+                description = "fix validation issues"
+            elif scope == "bug":
+                description = "fix critical bugs"
+            else:
+                description = "fix issues and bugs"
+        elif change_type == "docs":
+            if scope == "api":
+                description = "update API documentation"
+            elif scope == "readme":
+                description = "update README"
+            else:
+                description = "update documentation"
+        elif change_type == "refactor":
+            description = "refactor code structure"
+        elif change_type == "test":
+            description = "add or update tests"
+        elif change_type == "style":
+            description = "improve code formatting"
+        elif change_type == "build":
+            description = "update build configuration"
+        elif change_type == "ci":
+            description = "update CI/CD pipeline"
+        else:
+            description = "maintain codebase"
+        
+        formatted_result = f"{change_type}{scope_part}: {description}"
+        return formatted_result
 
 
 class FastCommitMessageGenerator:

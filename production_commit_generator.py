@@ -20,9 +20,24 @@ class ProductionDiffAnalyzer:
         self.role = "Diff Analysis Expert"
         self.goal = "Analyze git diffs to identify the primary purpose and type of change"
     
+    def _extract_file_names(self, git_diff: str) -> list:
+        """Extract file names from git diff output."""
+        import re
+        file_pattern = r'^diff --git a/(.+?) b/(.+?)$'
+        files = []
+        for line in git_diff.split('\n'):
+            match = re.match(file_pattern, line)
+            if match:
+                file_path = match.group(2)  # Use the 'b/' path (new file path)
+                files.append(file_path)
+        return files
+    
     def analyze_diff(self, git_diff: str) -> Dict[str, Any]:
         """Analyze git diff using production-ready heuristics."""
         git_diff_lower = git_diff.lower()
+        
+        # Extract file names from git diff
+        file_names = self._extract_file_names(git_diff)
         
         # Check for documentation changes first (most specific)
         if any(keyword in git_diff_lower for keyword in ['<!--', '-->', 'documentation', 'docs', 'readme', '.md']):
@@ -30,7 +45,8 @@ class ProductionDiffAnalyzer:
                 "change_type": "docs",
                 "scope": "documentation",
                 "confidence": "high",
-                "reasoning": "Documentation changes detected"
+                "reasoning": "Documentation changes detected",
+                "files": file_names
             }
         # Check for comment changes in code
         elif any(keyword in git_diff_lower for keyword in ['<!--', '//', '#', '/*', '*/']):
@@ -38,7 +54,8 @@ class ProductionDiffAnalyzer:
                 "change_type": "docs",
                 "scope": "code",
                 "confidence": "medium",
-                "reasoning": "Code commenting changes detected"
+                "reasoning": "Code commenting changes detected",
+                "files": file_names
             }
         # Check for authentication features (only if not documentation)
         elif any(keyword in git_diff_lower for keyword in ['log', 'auth', 'login', 'session', 'token', 'jwt']):
@@ -46,35 +63,40 @@ class ProductionDiffAnalyzer:
                 "change_type": "feat",
                 "scope": "auth",
                 "confidence": "high",
-                "reasoning": "Authentication and security features detected"
+                "reasoning": "Authentication and security features detected",
+                "files": file_names
             }
         elif any(keyword in git_diff_lower for keyword in ['pattern', 'regex', 'validation', 'fix', 'bug', 'error']):
             return {
                 "change_type": "fix",
                 "scope": "validation",
                 "confidence": "high",
-                "reasoning": "Bug fixes and validation improvements detected"
+                "reasoning": "Bug fixes and validation improvements detected",
+                "files": file_names
             }
         elif any(keyword in git_diff_lower for keyword in ['_', 'private', 'encapsulation', 'refactor', 'cleanup']):
             return {
                 "change_type": "refactor",
                 "scope": "code",
                 "confidence": "medium",
-                "reasoning": "Code structure and encapsulation improvements detected"
+                "reasoning": "Code structure and encapsulation improvements detected",
+                "files": file_names
             }
         elif any(keyword in git_diff_lower for keyword in ['test', 'spec', 'mock', 'stub']):
             return {
                 "change_type": "test",
                 "scope": "testing",
                 "confidence": "high",
-                "reasoning": "Test code additions or modifications detected"
+                "reasoning": "Test code additions or modifications detected",
+                "files": file_names
             }
         elif any(keyword in git_diff_lower for keyword in ['doc', 'readme', 'comment', 'explanation']):
             return {
                 "change_type": "docs",
                 "scope": "documentation",
                 "confidence": "high",
-                "reasoning": "Documentation updates detected"
+                "reasoning": "Documentation updates detected",
+                "files": file_names
             }
         elif any(keyword in git_diff_lower for keyword in ['style', 'format', 'lint', 'prettier']):
             return {
@@ -102,7 +124,8 @@ class ProductionDiffAnalyzer:
                 "change_type": "chore",
                 "scope": "maintenance",
                 "confidence": "low",
-                "reasoning": "General maintenance changes detected"
+                "reasoning": "General maintenance changes detected",
+                "files": file_names
             }
 
 
@@ -113,29 +136,39 @@ class ProductionSummaryAgent:
         self.role = "Technical Writer & Code Summarizer"
         self.goal = "Create clear, concise, and human-readable summaries of code changes"
     
-    def create_summary(self, git_diff: str, change_type: str = None, scope: str = None) -> str:
+    def create_summary(self, git_diff: str, change_type: str = None, scope: str = None, files: list = None) -> str:
         """Create production-quality summary based on change type and scope."""
+        # Create file context for summary
+        file_context = ""
+        if files:
+            if len(files) == 1:
+                file_context = f" in {files[0]}"
+            elif len(files) == 2:
+                file_context = f" in {files[0]} and {files[1]}"
+            else:
+                file_context = f" in {files[0]} and {len(files)-1} other files"
+        
         if change_type == "feat":
             if scope == "auth":
-                return "Add authentication and security features"
+                return f"Add authentication and security features{file_context}"
             else:
-                return "Add new functionality"
+                return f"Add new functionality{file_context}"
         elif change_type == "fix":
             if scope == "validation":
-                return "Fix validation and input handling"
+                return f"Fix validation and input handling{file_context}"
             else:
-                return "Fix bugs and resolve issues"
+                return f"Fix bugs and resolve issues{file_context}"
         elif change_type == "refactor":
-            return "Refactor code for better structure and maintainability"
+            return f"Refactor code for better structure and maintainability{file_context}"
         elif change_type == "test":
-            return "Add or update tests"
+            return f"Add or update tests{file_context}"
         elif change_type == "docs":
             if scope == "documentation":
-                return "Update API documentation"
+                return f"Update API documentation{file_context}"
             elif scope == "code":
-                return "Comment out code sections"
+                return f"Comment out code sections{file_context}"
             else:
-                return "Update documentation"
+                return f"Update documentation{file_context}"
         elif change_type == "style":
             return "Improve code formatting and style"
         elif change_type == "build":
@@ -234,7 +267,8 @@ class ProductionCommitMessageGenerator:
         summary = self.summary_agent.create_summary(
             git_diff, 
             analysis["change_type"], 
-            analysis["scope"]
+            analysis["scope"],
+            analysis.get("files", [])
         )
         if verbose:
             print(f"Agent: {self.summary_agent.role}")

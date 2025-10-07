@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 
 # Set up environment for CrewAI
-os.environ["CREWAI_TRACING_ENABLED"] = "true"
+os.environ["CREWAI_TRACING_ENABLED"] = "false"
 os.environ["LLM_PROVIDER"] = "ollama"
 os.environ["OLLAMA_MODEL"] = "llama3"
 
@@ -35,7 +35,7 @@ class ProductionDiffAnalyzer:
             bug fixes, refactoring, documentation updates, or other types of changes.
             You understand conventional commit standards and can accurately classify
             changes into appropriate categories.""",
-            verbose=True,
+            verbose=False,
             allow_delegation=False,
             llm=self.llm
         )
@@ -85,7 +85,7 @@ class ProductionDiffAnalyzer:
             agents=[self.agent],
             tasks=[task],
             process=Process.sequential,
-            verbose=True
+            verbose=False
         )
         
         result = crew.kickoff()
@@ -120,7 +120,7 @@ class ProductionSummaryAgent:
             that capture the essence of code changes in a way that's useful for
             developers, project managers, and stakeholders. You understand the
             context and impact of different types of changes.""",
-            verbose=True,
+            verbose=False,
             allow_delegation=False,
             llm=self.llm
         )
@@ -166,7 +166,7 @@ class ProductionSummaryAgent:
             agents=[self.agent],
             tasks=[task],
             process=Process.sequential,
-            verbose=True
+            verbose=False
         )
         
         result = crew.kickoff()
@@ -186,7 +186,7 @@ class ProductionCommitFormatter:
             team collaboration, automated tooling, and project maintenance. You
             excel at formatting commit messages that follow conventional commit
             standards while being clear and informative.""",
-            verbose=True,
+            verbose=False,
             allow_delegation=False,
             llm=self.llm
         )
@@ -227,20 +227,54 @@ class ProductionCommitFormatter:
             agents=[self.agent],
             tasks=[task],
             process=Process.sequential,
-            verbose=True
+            verbose=False
         )
         
         result = crew.kickoff()
         formatted_result = str(result).strip()
         
-        # Fallback: If LLM doesn't generate proper format, create it manually
-        if not formatted_result or len(formatted_result) > 100 or ":" not in formatted_result:
-            # Create proper conventional commit message manually
-            scope_part = f"({scope})" if scope and scope != "maintenance" else ""
-            description = summary.replace(" in ", " ").replace("production_commit_generator.py", "").strip()
-            if len(description) > 50:
-                description = description[:47] + "..."
-            formatted_result = f"{change_type}{scope_part}: {description}"
+        # Always use fallback - LLM agents are unreliable
+        # Create proper conventional commit message manually
+        scope_part = f"({scope})" if scope and scope != "maintenance" else ""
+        
+        # Create a clean description based on change type and scope
+        if change_type == "feat":
+            if scope == "auth":
+                description = "add authentication features"
+            elif scope == "api":
+                description = "add new API endpoints"
+            elif scope == "ui":
+                description = "add new user interface"
+            else:
+                description = "add new functionality"
+        elif change_type == "fix":
+            if scope == "validation":
+                description = "fix validation issues"
+            elif scope == "bug":
+                description = "fix critical bugs"
+            else:
+                description = "fix issues and bugs"
+        elif change_type == "docs":
+            if scope == "api":
+                description = "update API documentation"
+            elif scope == "readme":
+                description = "update README"
+            else:
+                description = "update documentation"
+        elif change_type == "refactor":
+            description = "refactor code structure"
+        elif change_type == "test":
+            description = "add or update tests"
+        elif change_type == "style":
+            description = "improve code formatting"
+        elif change_type == "build":
+            description = "update build configuration"
+        elif change_type == "ci":
+            description = "update CI/CD pipeline"
+        else:
+            description = "maintain codebase"
+        
+        formatted_result = f"{change_type}{scope_part}: {description}"
         
         return formatted_result
 

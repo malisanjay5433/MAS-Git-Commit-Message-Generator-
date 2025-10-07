@@ -2,7 +2,7 @@
 Production Git Commit Message Generator - Multi-Agent System
 
 This is a production-ready version for team deployment that provides
-consistent commit message generation across all engineers.
+consistent commit message generation across all engineers using LLM.
 """
 
 import os
@@ -11,6 +11,14 @@ import sys
 import argparse
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+# Set up environment for CrewAI
+os.environ["CREWAI_TRACING_ENABLED"] = "true"
+os.environ["LLM_PROVIDER"] = "ollama"
+os.environ["OLLAMA_MODEL"] = "llama3"
+
+from crewai import Agent, Task, Crew, Process
+from langchain_ollama import ChatOllama
 
 
 class ProductionDiffAnalyzer:
@@ -40,12 +48,28 @@ class ProductionDiffAnalyzer:
         file_names = self._extract_file_names(git_diff)
         
         # Check for documentation changes first (most specific)
-        if any(keyword in git_diff_lower for keyword in ['<!--', '-->', 'documentation', 'docs', 'readme', '.md']):
+        # Only consider .md files or files with documentation-specific patterns
+        has_md_files = any('.md' in f for f in file_names)
+        has_doc_patterns = any(keyword in git_diff_lower for keyword in ['<!--', '-->', 'readme'])
+        
+        # Don't match if it's a .py file with code changes
+        is_python_code = any('.py' in f for f in file_names) and any(keyword in git_diff_lower for keyword in ['def ', 'class ', 'import ', 'return '])
+        
+        if (has_md_files or has_doc_patterns) and not is_python_code:
             return {
                 "change_type": "docs",
                 "scope": "documentation",
                 "confidence": "high",
                 "reasoning": "Documentation changes detected",
+                "files": file_names
+            }
+        # Check for code enhancements and new functionality
+        elif any(keyword in git_diff_lower for keyword in ['def ', 'class ', 'import ', 'return ', 'if ', 'for ', 'while ']):
+            return {
+                "change_type": "feat",
+                "scope": "code",
+                "confidence": "high",
+                "reasoning": "Code enhancements and new functionality detected",
                 "files": file_names
             }
         # Check for comment changes in code
@@ -90,14 +114,8 @@ class ProductionDiffAnalyzer:
                 "reasoning": "Test code additions or modifications detected",
                 "files": file_names
             }
-        elif any(keyword in git_diff_lower for keyword in ['doc', 'readme', 'comment', 'explanation']):
-            return {
-                "change_type": "docs",
-                "scope": "documentation",
-                "confidence": "high",
-                "reasoning": "Documentation updates detected",
-                "files": file_names
-            }
+        # Remove this generic docs detection - it's too broad
+        # elif any(keyword in git_diff_lower for keyword in ['doc', 'readme', 'comment', 'explanation']):
         elif any(keyword in git_diff_lower for keyword in ['style', 'format', 'lint', 'prettier']):
             return {
                 "change_type": "style",

@@ -1,4 +1,4 @@
-# API Documentation
+<!-- # API Documentation
 
 ## Authentication Endpoints
 
@@ -28,4 +28,4 @@
 - **Description**: Update user profile
 - **Headers**: Authorization: Bearer {token}
 - **Parameters**: Profile update data
-- **Response**: Updated profile information
+- **Response**: Updated profile information -->

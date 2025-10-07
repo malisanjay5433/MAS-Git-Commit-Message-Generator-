@@ -1,6 +1,22 @@
 """
 Git Commit Message Generator - Multi-Agent System using CrewAI
-Implements the three-agent system as described in the README
+
+This module implements a sophisticated multi-agent system for generating conventional
+commit messages from git diffs. The system uses three specialized agents that work
+together to analyze changes, create summaries, and format commit messages according
+to conventional commit standards.
+
+Multi-Agent Architecture:
+    - DiffAnalysisAgent: Analyzes git diffs and identifies change patterns
+    - SummaryAgent: Creates human-readable summaries of changes
+    - CommitFormatterAgent: Formats messages according to conventional commit standards
+
+The system follows the CrewAI framework for agent coordination and uses LLM (Ollama)
+for intelligent analysis with robust fallback mechanisms for reliability.
+
+Author: Sanjay Mali
+Version: 1.0.0
+License: MIT
 """
 
 import os
@@ -18,7 +34,30 @@ from crewai import Agent, Task, Crew, Process, LLM
 
 
 class ChangeType(Enum):
-    """Enum for commit types following conventional commits."""
+    """
+    Enumeration of conventional commit types.
+    
+    This enum defines the standard commit types according to the conventional
+    commits specification. Each type represents a different category of change
+    that can be made to a codebase.
+    
+    Attributes:
+        FEAT (str): A new feature for the user
+        FIX (str): A bug fix
+        DOCS (str): Documentation only changes
+        STYLE (str): Changes that do not affect the meaning of the code
+        REFACTOR (str): A code change that neither fixes a bug nor adds a feature
+        TEST (str): Adding missing tests or correcting existing tests
+        CHORE (str): Changes to the build process or auxiliary tools
+        BUILD (str): Changes that affect the build system or external dependencies
+        CI (str): Changes to CI configuration files and scripts
+    
+    Example:
+        >>> ChangeType.FEAT.value
+        'feat'
+        >>> ChangeType.FIX.value
+        'fix'
+    """
     FEAT = "feat"
     FIX = "fix"
     DOCS = "docs"
@@ -31,7 +70,29 @@ class ChangeType(Enum):
 
 
 class Scope(Enum):
-    """Enum for commit scopes."""
+    """
+    Enumeration of commit scopes for conventional commits.
+    
+    This enum defines the scope or domain of changes within a commit.
+    Scopes help categorize changes by the area of the codebase they affect,
+    providing additional context about the nature of the change.
+    
+    Attributes:
+        CODE (str): General code changes
+        MARKDOWN (str): Markdown documentation changes
+        README (str): README file changes
+        API (str): API-related changes
+        AUTH (str): Authentication and authorization changes
+        UI (str): User interface changes
+        VALIDATION (str): Input validation changes
+        MAINTENANCE (str): General maintenance changes
+    
+    Example:
+        >>> Scope.AUTH.value
+        'auth'
+        >>> Scope.API.value
+        'api'
+    """
     CODE = "code"
     MARKDOWN = "markdown"
     README = "readme"
@@ -45,8 +106,34 @@ class Scope(Enum):
 class DiffAnalysisAgent:
     """
     Agent 1: Diff Analysis Agent
-    Role: Expert at analyzing git diffs and identifying change patterns
-    Goal: Classify changes into appropriate conventional commit types
+    
+    This agent specializes in analyzing git diffs and identifying change patterns.
+    It uses CrewAI framework with LLM to intelligently classify changes into
+    appropriate conventional commit types and scopes.
+    
+    Role:
+        Expert at analyzing git diffs and identifying change patterns
+    
+    Goal:
+        Classify changes into appropriate conventional commit types
+    
+    Responsibilities:
+        - Extract file names from git diff output
+        - Analyze file types and extensions
+        - Identify change patterns (new functions, bug fixes, etc.)
+        - Classify change type (feat, fix, docs, etc.)
+        - Determine scope (auth, api, ui, etc.)
+        - Provide confidence level for classification
+    
+    Attributes:
+        llm (LLM): The language model for analysis
+        agent (Agent): The CrewAI agent instance
+    
+    Example:
+        >>> analyzer = DiffAnalysisAgent()
+        >>> result = analyzer.analyze_diff(git_diff_string)
+        >>> print(result['change_type'])
+        'feat'
     """
     
     def __init__(self):
@@ -66,7 +153,26 @@ class DiffAnalysisAgent:
         )
     
     def _extract_file_names(self, git_diff: str) -> list:
-        """Extract file names from git diff output."""
+        """
+        Extract file names from git diff output.
+        
+        This method parses the git diff string to extract the names of files
+        that have been modified, added, or deleted. It uses regex pattern matching
+        to identify the file paths from the diff headers.
+        
+        Args:
+            git_diff (str): The git diff string to parse
+            
+        Returns:
+            list: A list of file paths that were changed
+            
+        Example:
+            >>> analyzer = DiffAnalysisAgent()
+            >>> diff = "diff --git a/src/main.py b/src/main.py\\nindex 123..456"
+            >>> files = analyzer._extract_file_names(diff)
+            >>> print(files)
+            ['src/main.py']
+        """
         import re
         file_pattern = r'^diff --git a/(.+?) b/(.+?)$'
         files = []
@@ -78,7 +184,35 @@ class DiffAnalysisAgent:
         return files
     
     def analyze_diff(self, git_diff: str) -> Dict[str, Any]:
-        """Analyze git diff using CrewAI agent."""
+        """
+        Analyze git diff using CrewAI agent.
+        
+        This method uses the CrewAI framework to analyze a git diff and determine
+        the type and scope of changes. It creates a task for the LLM agent to
+        classify the changes according to conventional commit standards.
+        
+        The method includes robust fallback mechanisms that use rule-based
+        analysis if the LLM fails or returns invalid results.
+        
+        Args:
+            git_diff (str): The git diff string to analyze
+            
+        Returns:
+            Dict[str, Any]: Analysis results containing:
+                - change_type (str): The type of change (feat, fix, docs, etc.)
+                - scope (str): The scope of the change (auth, api, ui, etc.)
+                - confidence (str): Confidence level (high, medium, low)
+                - reasoning (str): Brief explanation of the classification
+                - files (list): List of changed file paths
+                
+        Example:
+            >>> analyzer = DiffAnalysisAgent()
+            >>> result = analyzer.analyze_diff(git_diff_string)
+            >>> print(result['change_type'])
+            'feat'
+            >>> print(result['scope'])
+            'auth'
+        """
         file_names = self._extract_file_names(git_diff)
         
         # Create task for diff analysis
@@ -143,8 +277,33 @@ class DiffAnalysisAgent:
 class SummaryAgent:
     """
     Agent 2: Summary Agent
-    Role: Specialized in creating clear, human-readable summaries
-    Goal: Generate concise summaries of changes for commit messages
+    
+    This agent specializes in creating clear, human-readable summaries of code changes.
+    It uses CrewAI framework with LLM to generate concise summaries that capture
+    the key functionality and impact of changes for commit messages.
+    
+    Role:
+        Specialized in creating clear, human-readable summaries
+    
+    Goal:
+        Generate concise summaries of changes for commit messages
+    
+    Responsibilities:
+        - Analyze git diff and analysis results
+        - Create brief, informative summaries
+        - Focus on key functionality and impact
+        - Ensure clarity and readability
+        - Maintain consistent tone and style
+    
+    Attributes:
+        llm (LLM): The language model for summary generation
+        agent (Agent): The CrewAI agent instance
+    
+    Example:
+        >>> summarizer = SummaryAgent()
+        >>> summary = summarizer.create_summary(git_diff, analysis)
+        >>> print(summary)
+        'Add user authentication with JWT tokens'
     """
     
     def __init__(self):
@@ -216,8 +375,33 @@ class SummaryAgent:
 class CommitFormatterAgent:
     """
     Agent 3: Commit Formatter Agent
-    Role: Expert in conventional commit standards and formatting
-    Goal: Format messages according to conventional commit specification
+    
+    This agent specializes in formatting commit messages according to conventional
+    commit standards. It uses CrewAI framework with LLM to create properly formatted
+    commit messages that follow the conventional commit specification.
+    
+    Role:
+        Expert in conventional commit standards and formatting
+    
+    Goal:
+        Format messages according to conventional commit specification
+    
+    Responsibilities:
+        - Apply conventional commit formatting rules
+        - Validate message structure and length
+        - Ensure proper format: type(scope): description
+        - Handle edge cases and special formatting
+        - Maintain consistency with conventional commit standards
+    
+    Attributes:
+        llm (LLM): The language model for formatting
+        agent (Agent): The CrewAI agent instance
+    
+    Example:
+        >>> formatter = CommitFormatterAgent()
+        >>> message = formatter.format_commit_message('feat', 'auth', 'add authentication')
+        >>> print(message)
+        'feat(auth): add authentication features'
     """
     
     def __init__(self):
@@ -354,11 +538,39 @@ class CommitFormatterAgent:
 
 
 class GitService:
-    """Service class for git operations."""
+    """
+    Service class for git operations.
+    
+    This class provides static methods for interacting with git repositories,
+    including retrieving staged changes and commit diffs. It handles git
+    command execution and error handling.
+    
+    Methods:
+        get_staged_diff(): Retrieve staged changes from git
+        get_commit_diff(): Retrieve diff between commits
+    
+    Example:
+        >>> git_service = GitService()
+        >>> staged_changes = GitService.get_staged_diff()
+        >>> commit_diff = GitService.get_commit_diff('HEAD~1 HEAD')
+    """
     
     @staticmethod
     def get_staged_diff() -> str:
-        """Get staged changes."""
+        """
+        Get staged changes from git repository.
+        
+        This method executes 'git diff --cached' to retrieve all staged changes
+        in the current repository. It returns the diff output as a string.
+        
+        Returns:
+            str: The git diff output for staged changes, or empty string if error
+            
+        Example:
+            >>> staged_diff = GitService.get_staged_diff()
+            >>> print(len(staged_diff) > 0)
+            True
+        """
         try:
             result = subprocess.run(
                 ["git", "diff", "--cached"],
@@ -370,7 +582,23 @@ class GitService:
     
     @staticmethod
     def get_commit_diff(commit_range: str = "HEAD~1 HEAD") -> str:
-        """Get commit diff."""
+        """
+        Get diff between commits.
+        
+        This method executes 'git diff' with the specified commit range to
+        retrieve the differences between commits.
+        
+        Args:
+            commit_range (str): The commit range to compare (default: "HEAD~1 HEAD")
+            
+        Returns:
+            str: The git diff output between commits, or empty string if error
+            
+        Example:
+            >>> commit_diff = GitService.get_commit_diff("HEAD~2 HEAD")
+            >>> print(len(commit_diff) > 0)
+            True
+        """
         try:
             result = subprocess.run(
                 ["git", "diff", commit_range],
@@ -384,7 +612,30 @@ class GitService:
 class CommitMessageGenerator:
     """
     Main orchestrator for the multi-agent system.
-    Coordinates the three agents: Diff Analysis, Summary, and Commit Formatter.
+    
+    This class coordinates the three specialized agents to generate conventional
+    commit messages from git diffs. It orchestrates the workflow: Diff Analysis →
+    Summary Generation → Commit Formatting.
+    
+    The system follows a sequential workflow where each agent builds upon the
+    output of the previous agent, creating a collaborative multi-agent system.
+    
+    Agents:
+        - DiffAnalysisAgent: Analyzes git diffs and classifies changes
+        - SummaryAgent: Creates human-readable summaries
+        - CommitFormatterAgent: Formats messages according to conventional commits
+    
+    Attributes:
+        diff_analyzer (DiffAnalysisAgent): Agent for diff analysis
+        summary_agent (SummaryAgent): Agent for summary generation
+        formatter_agent (CommitFormatterAgent): Agent for message formatting
+        git_service (GitService): Service for git operations
+    
+    Example:
+        >>> generator = CommitMessageGenerator()
+        >>> message = generator.generate(use_staged=True)
+        >>> print(message)
+        'feat(auth): add authentication features'
     """
     
     def __init__(self):
@@ -394,7 +645,39 @@ class CommitMessageGenerator:
         self.git_service = GitService()
     
     def generate(self, git_diff: Optional[str] = None, use_staged: bool = False) -> str:
-        """Generate commit message using the multi-agent system."""
+        """
+        Generate commit message using the multi-agent system.
+        
+        This method orchestrates the three-agent workflow to generate a conventional
+        commit message. It coordinates the DiffAnalysisAgent, SummaryAgent, and
+        CommitFormatterAgent in sequence to produce the final commit message.
+        
+        The workflow follows these steps:
+        1. Diff Analysis: Analyze git diff and classify changes
+        2. Summary Generation: Create human-readable summary
+        3. Commit Formatting: Format message according to conventional commits
+        
+        Args:
+            git_diff (Optional[str]): The git diff string to analyze. If None,
+                will use git service to retrieve diff.
+            use_staged (bool): If True, use staged changes instead of commit diff.
+                Defaults to False.
+                
+        Returns:
+            str: The generated conventional commit message, or "No changes detected."
+                if no changes are found.
+                
+        Example:
+            >>> generator = CommitMessageGenerator()
+            >>> message = generator.generate(use_staged=True)
+            >>> print(message)
+            'feat(auth): add authentication features'
+            
+            >>> custom_diff = "diff --git a/src/auth.py b/src/auth.py..."
+            >>> message = generator.generate(git_diff=custom_diff)
+            >>> print(message)
+            'feat(auth): add authentication features'
+        """
         if use_staged:
             git_diff = self.git_service.get_staged_diff()
         elif git_diff is None:
@@ -420,7 +703,30 @@ class CommitMessageGenerator:
 
 
 def main():
-    """CLI interface for the multi-agent system."""
+    """
+    CLI interface for the multi-agent system.
+    
+    This function provides a command-line interface for the Git Commit Message
+    Generator. It parses command-line arguments and orchestrates the multi-agent
+    system to generate conventional commit messages.
+    
+    Command-line options:
+        --staged: Use staged changes instead of last commit
+        --copy: Copy generated message to clipboard
+        commit_range: Custom commit range (e.g., HEAD~2 HEAD)
+        
+    The function handles error cases gracefully and provides helpful feedback
+    to users. It also integrates with the system clipboard for easy copying
+    of generated commit messages.
+    
+    Example usage:
+        $ python commit_generator.py --staged --copy
+        $ python commit_generator.py HEAD~2 HEAD
+        $ python commit_generator.py --staged
+        
+    Returns:
+        None: Outputs results to stdout and optionally copies to clipboard
+    """
     parser = argparse.ArgumentParser(
         description="Git Commit Message Generator - Multi-Agent System with CrewAI",
         formatter_class=argparse.RawDescriptionHelpFormatter,

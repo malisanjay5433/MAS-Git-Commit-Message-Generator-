@@ -5,7 +5,7 @@ This uses the working simple multi-agent system.
 For demonstration, use demo_commit_generator.py
 """
 
-from simple_commit_generator import SimpleCommitMessageGenerator
+from production_commit_generator import ProductionCommitMessageGenerator
 import sys
 
 def main():
@@ -13,8 +13,8 @@ def main():
     print("🚀 Git Commit Message Generator - Multi-Agent System")
     print("=" * 60)
     
-    # Initialize the working generator
-    generator = SimpleCommitMessageGenerator()
+    # Initialize the production generator
+    generator = ProductionCommitMessageGenerator()
     
     # Check command line arguments
     if len(sys.argv) > 1:
@@ -27,8 +27,8 @@ def main():
             print("  python main.py           # Use last commit")
             print("  python main.py --staged  # Use staged changes")
             print("  python main.py --help    # Show this help")
-            print("\nFor full demonstration, run:")
-            print("  python demo_commit_generator.py")
+            print("\nFor production usage, run:")
+            print("  python production_commit_generator.py --staged --copy")
             return
         else:
             # Custom commit range

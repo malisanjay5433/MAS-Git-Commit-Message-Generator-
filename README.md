@@ -128,23 +128,14 @@ This problem is perfectly suited for a multi-agent approach due to several key f
 
 #### Basic Usage
 ```bash
-# Run the working demonstration (recommended)
-python demo_commit_generator.py
+# Production system (recommended for teams)
+python production_commit_generator.py --staged --copy
 
-# Run the simple version (no LLM required)
-python simple_commit_generator.py
+# Simple interface
+python main.py --staged
 
-# Generate commit message for last commit (requires LLM setup)
-python commit_generator.py
-
-# Generate commit message for staged changes
-python commit_generator.py --staged
-
-# Generate commit message for specific commit range
-python commit_generator.py HEAD~2 HEAD
-
-# Show help
-python commit_generator.py --help
+# Show all options
+python production_commit_generator.py --help
 ```
 
 #### Advanced Usage

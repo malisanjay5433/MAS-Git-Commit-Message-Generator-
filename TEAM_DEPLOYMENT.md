@@ -144,13 +144,13 @@ git commit -m "refactor(code): refactor code for better structure and maintainab
 - [ ] Set up team training session
 - [ ] Monitor usage and gather feedback
 
-<!-- ## 📞 **Support**
+## 📞 **Support**
 
 For questions or issues:
 1. Check the `--help` output
 2. Review this deployment guide
 3. Test with `--verbose` flag for detailed workflow
-4. Contact the team lead for advanced configuration -->
+4. Contact the team lead for advanced configuration
 
 ---
 
